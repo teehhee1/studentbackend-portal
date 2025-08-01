@@ -12,16 +12,30 @@ exports.createCourse = async (req, res) => {
   }
 };
 
-// Assign students to course
+// Assign students to course (no duplicates)
 exports.assignStudents = async (req, res) => {
   try {
     const { courseId, studentIds } = req.body;
+
     const course = await Course.findById(courseId);
     if (!course) return res.status(404).json({ message: "Course not found" });
 
-    course.students.push(...studentIds);
+    // Filter out students already assigned
+    const newStudents = studentIds.filter(
+      (id) => !course.students.includes(id)
+    );
+
+    if (newStudents.length === 0) {
+      return res.status(400).json({ message: "All students are already enrolled" });
+    }
+
+    course.students.push(...newStudents);
     await course.save();
-    res.status(200).json(course);
+
+    res.status(200).json({
+      message: `${newStudents.length} student(s) assigned successfully.`,
+      course,
+    });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
